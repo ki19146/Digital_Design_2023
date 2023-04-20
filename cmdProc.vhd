@@ -7,10 +7,10 @@ use UNISIM.VCOMPONENTS.ALL;
 
 entity cmdProc is
 port (
-    clk:            in      std_logic;
+    clk:            in      std_logic;          
     reset:          in      std_logic;
-    rxData:         in      std_logic_vector (7 downto 0);
-    rxNow:          in      std_logic; 
+    rxData:         in      std_logic_vector (7 downto 0); ---data_rx
+    rxNow:          in      std_logic; ---valid
     ovErr:          in      std_logic; 
     framErr:        in      std_logic;
     rxdone:         out     std_logic;
@@ -105,7 +105,7 @@ begin
 		v_txNow := '0'; --Default value of txNow
 		v_start := '0'; --Default value of start
 		CASE curState IS	
-			WHEN INIT_idle =>
+			WHEN INIT_idle =>                                   ---initial state
 				IF (rxNow = '1') and (txDone = '1') THEN
 					v_rxDone := '1';
 					nextState <= INIT_check;
@@ -114,9 +114,9 @@ begin
 				END IF;
 
 			-- Checks for inputs a/A, or l/L or p/P
-			WHEN INIT_check =>
+			WHEN INIT_check =>                                 ---initial receiver state
 				v_txNow := '1';
-				IF (rxData = "01000001") or (rxData = "01100001") THEN
+				IF (rxData = "01000001") or (rxData = "01100001") THEN ---? is the 8 bits pattern correct?
 					nextState <= valid_A_idle;
 				-- 'l' or "L"
 				ELSIF ((rxData = "01001100") or (rxData = "01101100") or (rxData = "01010000") or (rxData = "01110000")) and (processed = '1') THEN
@@ -126,9 +126,9 @@ begin
 				END IF;
 			---------------------------------------
 	
-			WHEN valid_A_idle =>
-				IF (rxNow = '1') and (txDone = '1') THEN
-					v_rxDone := '1';
+			WHEN valid_A_idle =>                        ---reverive first bit
+				IF (rxNow = '1') and (txDone = '1') THEN ---framErr (fe) should be in consideration, while (fe = '1')
+					v_rxDone := '1'; 
 					nextState <= valid_A_check;
 				ELSE
 					nextState <= valid_A_idle;
@@ -651,7 +651,7 @@ begin
 				WHEN "0111" => ANNN_dataTx(7 downto 0) <= "00110111";
 				WHEN "1000" => ANNN_dataTx(7 downto 0) <= "00111000";
 				WHEN "1001" => ANNN_dataTx(7 downto 0) <= "00111001";
-				WHEN "1010" => ANNN_dataTx(7 downto 0) <= "01000001";
+				WHEN "1010" => ANNN_dataTx(7 downto 0) <= "0 1000001";
 				WHEN "1011" => ANNN_dataTx(7 downto 0) <= "01000010";
 				WHEN "1100" => ANNN_dataTx(7 downto 0) <= "01000011";
 				WHEN "1101" => ANNN_dataTx(7 downto 0) <= "01000100";
