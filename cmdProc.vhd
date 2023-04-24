@@ -11,19 +11,19 @@ port (
     reset:          in      std_logic;
     rxData:         in      std_logic_vector (7 downto 0); ---data_rx
     rxNow:          in      std_logic; ---valid
-    ovErr:          in      std_logic; 
-    framErr:        in      std_logic;
-    rxdone:         out     std_logic;
-    txdone:         in      std_logic;
-    txnow:          out     std_logic;
-    txData:         out     std_logic_vector (7 downto 0);
-    dataReady:      in      std_logic;
-    byte:           in      std_logic_vector(7 downto 0);
-    maxIndex:       in      BCD_ARRAY_TYPE(2 downto 0);
-    dataResults:    in      CHAR_ARRAY_TYPE(0 to RESULT_BYTE_NUM-1);
-    seqDone:        in      std_logic;
-    start:          out     std_logic;
-    numWords_bcd:   out     BCD_ARRAY_TYPE(2 downto 0)
+    ovErr:          in      std_logic; ---oe
+    framErr:        in      std_logic; ---fe
+    rxdone:         out     std_logic; ---Done
+    txdone:         in      std_logic; ---txDone
+    txnow:          out     std_logic; ---txNow
+    txData:         out     std_logic_vector (7 downto 0); ---data_tx
+    dataReady:      in      std_logic; ---dataReady
+    byte:           in      std_logic_vector(7 downto 0); ---byte
+    maxIndex:       in      BCD_ARRAY_TYPE(2 downto 0); ---maxIndex
+    dataResults:    in      CHAR_ARRAY_TYPE(0 to RESULT_BYTE_NUM-1); ---dataResult
+    seqDone:        in      std_logic; ---seqDone
+    start:          out     std_logic; ---start
+    numWords_bcd:   out     BCD_ARRAY_TYPE(2 downto 0) ---numWords
     );
 
 end cmdProc;
