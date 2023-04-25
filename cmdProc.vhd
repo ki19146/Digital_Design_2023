@@ -648,7 +648,7 @@ begin
 				WHEN "0111" => ANNN_dataTx(7 downto 0) <= "00110111";
 				WHEN "1000" => ANNN_dataTx(7 downto 0) <= "00111000";
 				WHEN "1001" => ANNN_dataTx(7 downto 0) <= "00111001";
-				WHEN "1010" => ANNN_dataTx(7 downto 0) <= "0 1000001";
+				WHEN "1010" => ANNN_dataTx(7 downto 0) <= "01000001";
 				WHEN "1011" => ANNN_dataTx(7 downto 0) <= "01000010";
 				WHEN "1100" => ANNN_dataTx(7 downto 0) <= "01000011";
 				WHEN "1101" => ANNN_dataTx(7 downto 0) <= "01000100";
