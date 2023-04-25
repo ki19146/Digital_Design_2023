@@ -105,49 +105,46 @@ begin
 		v_txNow := '0'; --Default value of txNow
 		v_start := '0'; --Default value of start
 		CASE curState IS	
-			WHEN INIT_idle =>                                   ---initial state
-				IF (rxNow = '1') and (txDone = '1') THEN
+			WHEN INIT_idle =>    --INIT: inactive
+				IF (rxNow = '1') and (txDone = '1') THEN --When rxNow, txDone is high -> rxDone value = '1'
 					v_rxDone := '1';
-					nextState <= INIT_check;
+					nextState <= INIT_check; -- and INIT would be checked
 				ELSE
-					nextState <= INIT_idle;
+					nextState <= INIT_idle; -- If rxNow = '0' --> INIT still inactive
 				END IF;
 
 			-- Checks for inputs a/A, or l/L or p/P
-			WHEN INIT_check =>                                 ---initial receiver state
-				v_txNow := '1';
-				IF (rxData = "01000001") or (rxData = "01100001") THEN ---? is the 8 bits pattern correct?
+			WHEN INIT_check =>
+				v_txNow := '1';  --value of txNow should be high for single clk cycle to trigger a send.
+				IF (rxData = "01000001") or (rxData = "01100001") THEN 
 					nextState <= valid_A_idle;
 				-- 'l' or "L"
 				ELSIF ((rxData = "01001100") or (rxData = "01101100") or (rxData = "01010000") or (rxData = "01110000")) and (processed = '1') THEN
 					nextState <= putty_n_1_wait;
 				ELSE
-					nextState <= INIT_idle;
+					nextState <= INIT_idle; --p/P
 				END IF;
-			---------------------------------------
+			---------------------------------------INIT_check->valid_A
 	
-			WHEN valid_A_idle =>                        ---reverive first bit
-				IF (rxNow = '1') and (txDone = '1') THEN ---framErr (fe) should be in consideration, while (fe = '1')
-					v_rxDone := '1'; 
+			WHEN valid_A_idle =>
+				IF (rxNow = '1') and (txDone = '1') THEN --rxNow&txDone=1 -> rxDone=1
+					v_rxDone := '1';
 					nextState <= valid_A_check;
 				ELSE
-					nextState <= valid_A_idle;
+					nextState <= valid_A_idle; --rxDone=0
 				END IF;
 					
-			-- numeric input
+			-- check valid_A numeric input
 			WHEN valid_A_check =>
-				v_txNow := '1';
+				v_txNow := '1'; --txNow should be high
 				IF (rxData = "00110000") OR (rxData = "00110001") OR (rxData = "00110010") OR (rxData = "00110011") OR (rxData = "00110100") OR (rxData = "00110101") OR (rxData = "00110110") OR (rxData = "00110111") OR (rxData = "00111000") OR (rxData = "00111001") THEN
-					--numWords_bcd(2) <= rxData(3 downto 0);
-					--v_rxDone := '1';
-					nextState <= valid_1_idle;
+					nextState <= valid_1_idle;--case1(move to next variable(valid_n_idle))
 				ELSIF (rxData = "01000001") or (rxData = "01100001") THEN
-					--v_rxDone := '1';
-					nextState <= valid_A_idle;
+					nextState <= valid_A_idle;--case2(move to previous variable)
 				ELSIF ((rxData = "01001100") or (rxData = "01101100") or (rxData = "01010000") or (rxData = "01110000")) and (processed = '1') THEN
-					nextState <= putty_n_1_wait;
+					nextState <= putty_n_1_wait;--case3(send to putty)
 				ELSE
-					nextState <= INIT_idle;
+					nextState <= INIT_idle;--case4(go to initial state)
 				END IF;
 			
 			WHEN valid_1_idle =>
@@ -219,7 +216,7 @@ begin
 				ELSE
 					nextState <= putty_r_1_tx;
 				END IF;
-			--------------------------------------
+			-------------putty1-------------------------
 			-- Wait for txDone --> high
 			WHEN putty_eq_1_wait =>
 				IF (txdone = '1') then
@@ -269,7 +266,7 @@ begin
 				ELSE
 					nextState <= putty_r_2_tx;
 				END IF;
-			---------------------------------------
+			---------------------------------------(3)
 			
 			WHEN cmd_wait =>
 				IF (txdone = '1') then
@@ -497,7 +494,7 @@ begin
 					nextState <= putty_r_3_tx;
 				END IF;
 					
-			---------------------------------
+			----------------putty2-----------------***
 					
 			WHEN putty_eq_2_wait =>
 				IF (txdone = '1') then
