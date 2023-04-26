@@ -78,7 +78,7 @@ begin
 	BEGIN
 		IF rising_edge(CLK) THEN
 			IF (seqDone = '1') THEN -- 0
-				processed <= '1';
+				processed <= '1';     --equiv to CLK
 			ELSIF (curState = putty_n_1_wait) and (s_CurChoice = "01000001") then
 				processed <= '0';
 			END IF;
