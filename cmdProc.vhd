@@ -380,7 +380,7 @@ begin
 					
 			------------- P command ----------------------------		
 		
-			WHEN cmd_P_buf_char_1 =>
+			WHEN cmd_P_buf_char_1 =>    --buffers the first character of the command to be sent
 				if (txDone = '1') then
 					nextState <= cmd_P_tx_char_1; 
 				ELSE
@@ -388,7 +388,7 @@ begin
 				END IF;
 					
 			
-			WHEN cmd_P_tx_char_1 =>
+			WHEN cmd_P_tx_char_1 =>     --transmits the first character of the command and waits for 'txDone' to become high
 				if (txDone = '1') then
 					v_txNow := '1';
 					nextState <= cmd_P_buf_char_2;
@@ -397,7 +397,7 @@ begin
 				END IF;
 
 			
-			WHEN cmd_P_buf_char_2 =>
+			WHEN cmd_P_buf_char_2 =>   --buffers the second character of the command to be sent
 				if (txDone = '1') then
 					nextState <= cmd_P_tx_char_2; 
 				ELSE
@@ -405,7 +405,7 @@ begin
 				END IF;
 					
 		
-			WHEN cmd_P_tx_char_2 =>
+			WHEN cmd_P_tx_char_2 =>   --transmits the second character of the command and waits for 'txDone' to become high
 				if (txDone = '1') then
 					v_txNow := '1';
 					nextState <= putty_space; 
@@ -413,7 +413,7 @@ begin
 					nextState <= cmd_P_tx_char_2;
 				END IF;
 
-			WHEN cmd_P_buf_bcd_2 =>
+			WHEN cmd_P_buf_bcd_2 =>   --buffers the second digit of a binary-coded decimal (BCD) number to be sent
 				if (txDone = '1') then
 					nextState <= cmd_P_tx_bcd_2; 
 				ELSE
@@ -421,7 +421,7 @@ begin
 				END IF;
 					
 			-- Waits for txDone --> high 
-			WHEN cmd_P_tx_bcd_2 =>
+			WHEN cmd_P_tx_bcd_2 =>.  --transmits the second digit of a BCD number and waits for txDone to become high
 				if (txDone = '1') then
 					v_txNow := '1';
 					nextState <= cmd_P_buf_bcd_1; --putty_ANNN_wait;
@@ -430,14 +430,14 @@ begin
 				END IF;
 					
 				--------------
-			WHEN cmd_P_buf_bcd_1 =>
+			WHEN cmd_P_buf_bcd_1 =>. --buffers the first digit of a BCD number to be sent
 				if (txDone = '1') then
 					nextState <= cmd_P_tx_bcd_1; 
 				ELSE
 					nextState <= cmd_P_buf_bcd_1;
 				END IF;
 				
-			WHEN cmd_P_tx_bcd_1 =>
+			WHEN cmd_P_tx_bcd_1 =>  --transmits the first digit of a BCD number and waits for txDone to become high
 				if (txDone = '1') then
 					v_txNow := '1';
 					nextState <= cmd_P_buf_bcd_0; 
@@ -445,7 +445,7 @@ begin
 					nextState <= cmd_P_tx_bcd_1;
 				END IF;
 				
-			WHEN cmd_P_buf_bcd_0 =>
+			WHEN cmd_P_buf_bcd_0 =>. --buffers the zeroth digit of a BCD number to be sent
 				if (txDone = '1') then
 					nextState <= cmd_P_tx_bcd_0; 
 				ELSE
@@ -453,7 +453,7 @@ begin
 				END IF;
 					
 		
-			WHEN cmd_P_tx_bcd_0 =>
+			WHEN cmd_P_tx_bcd_0 =>. --transmits the zeroth digit of a BCD number and waits for txDone to become high
 				if (txDone = '1') then
 					v_txNow := '1';
 					nextState <= putty_n_3_wait;
@@ -483,7 +483,7 @@ begin
 				end if;
 			---------------------------------------
 			
-			WHEN putty_n_3_wait =>
+			WHEN putty_n_3_wait =>  --waits for a response after transmitting the third character of the command
 				IF (txdone = '1') then
 					nextState <= putty_n_3_tx;
 				ELSE
@@ -491,7 +491,7 @@ begin
 				END IF;
 					
 			-- output corresponding to counter & passes to Tx
-			WHEN putty_n_3_tx =>
+			WHEN putty_n_3_tx =>. --transmits the third character of the command and waits for txDone to become high
 				IF (txdone = '1') then
 					v_txNow := '1';
 					nextState <= putty_r_3_wait;
@@ -499,7 +499,7 @@ begin
 					nextState <= putty_n_3_tx;
 				END IF;
 					
-			WHEN putty_r_3_wait =>
+			WHEN putty_r_3_wait => --waits for a response after transmitting the fourth character of the command
 				IF (txdone = '1') then
 					nextState <= putty_r_3_tx;
 				ELSE
@@ -507,7 +507,7 @@ begin
 				END IF;
 			-- output corresponding to counter & passes to Tx
 					
-			WHEN putty_r_3_tx =>
+			WHEN putty_r_3_tx =>  --transmits the fourth character of the command and waits for txDone to become high
 				IF (txdone = '1') then
 					v_txNow := '1';
 					nextState <= putty_eq_2_wait;
@@ -517,14 +517,14 @@ begin
 					
 			----------------putty2-----------------
 					
-			WHEN putty_eq_2_wait =>
+			WHEN putty_eq_2_wait =>. --waits for a response after transmitting the equals sign
 				IF (txdone = '1') then
 					nextState <= putty_eq_2_tx;
 				ELSE
 					nextState <= putty_eq_2_wait;
 				END IF;
 					
-			WHEN putty_eq_2_tx =>			
+			WHEN putty_eq_2_tx =>	--transmits the equals sign and waits for txDone to become high		
 				IF (txdone = '1') then
 					v_txNow := '1';
 					IF (count_eq > 4) then
@@ -536,34 +536,37 @@ begin
 					nextState <= putty_eq_2_tx;
 				END IF;
 			---------------------------
-			WHEN putty_n_4_wait =>
+			WHEN putty_n_4_wait => --waits for a response after transmitting the fifth character of the command
 				IF (txdone = '1') then
 					nextState <= putty_n_4_tx;
 				ELSE
 					nextState <= putty_n_4_wait;
 				END IF;
+					
 			-- output corresponding to counter & passes to Tx
-			WHEN putty_n_4_tx =>
+			WHEN putty_n_4_tx =>   --transmits the fifth character of the command and waits for txDone to become high
 				IF (txdone = '1') then
 					v_txNow := '1';
 					nextState <= putty_r_4_wait;
 				ELSE
 					nextState <= putty_n_4_tx;
 				END IF;
-			WHEN putty_r_4_wait =>
+			WHEN putty_r_4_wait =>  --waits for a response after transmitting the sixth character of the command
 				IF (txdone = '1') then
 					nextState <= putty_r_4_tx;
 				ELSE
 					nextState <= putty_r_4_wait;
 				END IF;
+					
 			-- output corresponding to counter & passes to Tx
-			WHEN putty_r_4_tx =>
+			WHEN putty_r_4_tx =>  --waits for a response after transmitting the sixth character of the command
 				IF (txdone = '1') then
 					v_txNow := '1';
 					nextState <= putty_wait_final; --INIT_idle;
 				ELSE
 					nextState <= putty_r_4_tx;
 				END IF;
+					
 			WHEN putty_wait_final =>
 				IF (txdone = '1') then
 					nextState <= INIT_inact;
