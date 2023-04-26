@@ -13,9 +13,9 @@ port (
     rxNow:          in      std_logic; ---valid
     ovErr:          in      std_logic; ---oe
     framErr:        in      std_logic; ---fe
-    rxdone:         out     std_logic; ---Done
-    txdone:         in      std_logic; ---txDone
-    txnow:          out     std_logic; ---txNow
+    rxDone:         out     std_logic; ---Done
+    txDone:         in      std_logic; ---txDone
+    txNow:          out     std_logic; ---txNow
     txData:         out     std_logic_vector (7 downto 0); ---data_tx
     dataReady:      in      std_logic; ---dataReady
     byte:           in      std_logic_vector(7 downto 0); ---byte
@@ -31,10 +31,10 @@ end cmdProc;
 architecture cmdProc_behav of cmdProc is
 -- Component of dataconsume
     TYPE state_type IS (INIT,
-    	INIT_idle, INIT_check,
-    	valid_A_idle, valid_A_check,
-    	valid_1_idle, valid_1_check,
-    	valid_2_idle, valid_2_check,
+    	INIT_inact, INIT_check,
+    	valid_A_inact, valid_A_check,
+    	valid_1_inact, valid_1_check,
+    	valid_2_inact, valid_2_check,
     	putty_n_1_wait, putty_n_1_tx,
     	putty_r_1_wait, putty_r_1_tx,
     	putty_eq_1_wait, putty_eq_1_tx,
@@ -42,17 +42,17 @@ architecture cmdProc_behav of cmdProc is
     	putty_r_2_wait, putty_r_2_tx,
     	cmd_wait,
     	cmd_ANNN_dataReady, 
-    	cmd_ANNN_buffer_1, cmd_ANNN_tx_1, 
-    	cmd_ANNN_buffer_2, cmd_ANNN_tx_2,
+    	cmd_ANNN_buf_1, cmd_ANNN_tx_1, 
+    	cmd_ANNN_buf_2, cmd_ANNN_tx_2,
     	----
-    	cmd_L_buffer_1, cmd_L_tx_1, 
-    	cmd_L_buffer_2, cmd_L_tx_2,
-    	cmd_P_buffer_char_1, cmd_P_tx_char_1,
-    	cmd_P_buffer_char_2, cmd_P_tx_char_2,
+    	cmd_L_buf_1, cmd_L_tx_1, 
+    	cmd_L_buf_2, cmd_L_tx_2,
+    	cmd_P_buf_char_1, cmd_P_tx_char_1,
+    	cmd_P_buf_char_2, cmd_P_tx_char_2,
     	----
-    	cmd_P_buffer_bcd_2, cmd_P_tx_bcd_2,
-    	cmd_P_buffer_bcd_1, cmd_P_tx_bcd_1,
-    	cmd_P_buffer_bcd_0, cmd_P_tx_bcd_0,
+    	cmd_P_buf_bcd_2, cmd_P_tx_bcd_2,
+    	cmd_P_buf_bcd_1, cmd_P_tx_bcd_1,
+    	cmd_P_buf_bcd_0, cmd_P_tx_bcd_0,
     	putty_space, 
     	cmd_ANNN_checkSeq, cmd_L_checkSeq, 
     	putty_n_3_wait, putty_n_3_tx,
@@ -84,20 +84,20 @@ begin
 			END IF;
 		END IF;
 	END PROCESS;
-	----------------------------------------
+	
 	seq_state : PROCESS (clk, reset)
 	BEGIN
 		IF reset = '1' THEN
-			curState <= INIT_idle;
+			curState <= INIT_inact;
 		ELSIF rising_edge(CLK) THEN
 			curState <= nextState;
 		END IF;
 	END PROCESS; -- seq
-	-----------------------------------------count_nr
+	-----------------------------------------
 	combi_nextState : PROCESS (curState, rxNow, rxData,
 			processed, txDone, dataReady, ANNN_dataTx, 
 			count_eq, s_dataTx) 
-		variable v_rxDone, v_txNow, v_start: std_logic; -- variable for rxDone
+		variable v_rxDone, v_txNow, v_start: std_logic; 
 		
 	BEGIN
 	
@@ -105,12 +105,12 @@ begin
 		v_txNow := '0'; --Default value of txNow
 		v_start := '0'; --Default value of start
 		CASE curState IS	
-			WHEN INIT_idle =>    --INIT: inactive
+			WHEN INIT_inact =>    --INIT: inactive
 				IF (rxNow = '1') and (txDone = '1') THEN --When rxNow, txDone is high -> rxDone value = '1'
 					v_rxDone := '1';
 					nextState <= INIT_check; -- and INIT would be checked
 				ELSE
-					nextState <= INIT_idle; -- If rxNow = '0' --> INIT still inactive
+					nextState <= INIT_inact; -- If rxNow = '0' --> INIT still inactive
 				END IF;
 
 			-- Checks for inputs a/A, or l/L or p/P
@@ -118,21 +118,21 @@ begin
 				v_txNow := '1';  --value of txNow should be high for single clk cycle to trigger a send.
                                 -- ASCII code representing: 'A' or 'a'
 				IF (rxData = "01000001") or (rxData = "01100001") THEN 
-					nextState <= valid_A_idle;
+					nextState <= valid_A_inact;
 				-- ASCII code representing: 'l',"L" or 'p','P'
 				ELSIF ((rxData = "01001100") or (rxData = "01101100") or (rxData = "01010000") or (rxData = "01110000")) and (processed = '1') THEN
 					nextState <= putty_n_1_wait;
 				ELSE
-					nextState <= INIT_idle; --p/P
+					nextState <= INIT_inact; --p/P
 				END IF;
 			---------------------------------------INIT_check->valid_A
 	
-			WHEN valid_A_idle =>
+			WHEN valid_A_inact =>
 				IF (rxNow = '1') and (txDone = '1') THEN --rxNow&txDone=1 -> rxDone=1
 					v_rxDone := '1';
 					nextState <= valid_A_check;
 				ELSE
-					nextState <= valid_A_idle; --rxDone=0
+					nextState <= valid_A_inact; --rxDone=0
 				END IF;
 					
 			-- check valid_A numeric input
@@ -140,23 +140,23 @@ begin
 				v_txNow := '1'; --txNow should be high
                                 -- check if recived is ASCII code: '0' to '9' (7 downto 4) = 0011
 				IF (rxData = "00110000") OR (rxData = "00110001") OR (rxData = "00110010") OR (rxData = "00110011") OR (rxData = "00110100") OR (rxData = "00110101") OR (rxData = "00110110") OR (rxData = "00110111") OR (rxData = "00111000") OR (rxData = "00111001") THEN
-					nextState <= valid_1_idle;--case1(move to next variable(valid_n_idle))
+					nextState <= valid_1_inact;--case1(move to next variable(valid_n_idle))
                                 -- if recived: 'A' or 'a'
 				ELSIF (rxData = "01000001") or (rxData = "01100001") THEN
-					nextState <= valid_A_idle;--case2(move to previous variable)
+					nextState <= valid_A_inact;--case2(move to previous variable)
                                 -- if recived: upper/lower case 'l' or 'p'
 				ELSIF ((rxData = "01001100") or (rxData = "01101100") or (rxData = "01010000") or (rxData = "01110000")) and (processed = '1') THEN
 					nextState <= putty_n_1_wait;--case3(send to putty)
 				ELSE
-					nextState <= INIT_idle;--case4(go to initial state)
+					nextState <= INIT_inact;--case4(go to initial state)
 				END IF;
 					
-			WHEN valid_1_idle =>
+			WHEN valid_1_inact =>
 				IF (rxNow = '1') and (txDone = '1') THEN
 					v_rxDone := '1';
 					nextState <= valid_1_check;
 				ELSE
-					nextState <= valid_1_idle;
+					nextState <= valid_1_inact;
 				END IF;
 					
 			WHEN valid_1_check =>
@@ -164,21 +164,21 @@ begin
                                 -- transfer ascii code to corresponding states
 				IF (rxData = "00110000") OR (rxData = "00110001") OR (rxData = "00110010") OR (rxData = "00110011") OR (rxData = "00110100") OR (rxData = "00110101") OR (rxData = "00110110") OR (rxData = "00110111") OR (rxData = "00111000") OR (rxData = "00111001") THEN
 					--numWords_bcd(1) <= rxData(3 downto 0);
-					nextState <= valid_2_idle;
+					nextState <= valid_2_inact;
 				ELSIF (rxData = "01000001") or (rxData = "01100001") THEN
-					nextState <= valid_A_idle;
+					nextState <= valid_A_inact;
 				ELSIF ((rxData = "01001100") or (rxData = "01101100") or (rxData = "01010000") or (rxData = "01110000")) and (processed = '1') THEN
 					nextState <= putty_n_1_wait;
 				ELSE
-					nextState <= INIT_idle;
+					nextState <= INIT_inact;
 				END IF;
 			
-			WHEN valid_2_idle =>
+			WHEN valid_2_inact =>
 				IF (rxNow = '1') and (txDone = '1') THEN
 					v_rxDone := '1';
 					nextState <= valid_2_check;
 				ELSE
-					nextState <= valid_2_idle;
+					nextState <= valid_2_inact;
 				END IF;
 					
 			WHEN valid_2_check =>
@@ -188,11 +188,11 @@ begin
 					--numWords_bcd(0) <= rxData(3 downto 0);
 					nextState <= putty_n_1_wait;
 				ELSIF (rxData = "01000001") or (rxData = "01100001") THEN
-					nextState <= valid_A_idle;
+					nextState <= valid_A_inact;
 				ELSIF ((rxData = "01001100") or (rxData = "01101100") or (rxData = "01010000") or (rxData = "01110000")) and (processed = '1') THEN
 					nextState <= putty_n_1_wait;
 				ELSE
-					nextState <= INIT_idle;
+					nextState <= INIT_inact;
 				END IF;
 					
 			-- Waits until txdone --> high
@@ -288,9 +288,9 @@ begin
 						v_start := '1';
 						nextState <= cmd_ANNN_dataReady;
 					elsif s_CurChoice = "01001100" then      -- 'L' command
-						nextState <= cmd_L_buffer_1;
+						nextState <= cmd_L_buf_1;
 					elsif s_CurChoice = "01010000" then      -- 'P' command
-						nextState <= cmd_P_buffer_char_1;
+						nextState <= cmd_P_buf_char_1;
 					end if;
 				else
 					nextState <= cmd_wait;
@@ -299,34 +299,34 @@ begin
 			------------- ANNN ----------------------------	
 			WHEN cmd_ANNN_dataReady =>
 				IF (dataReady = '1') THEN
-					nextState <= cmd_ANNN_buffer_1;
+					nextState <= cmd_ANNN_buf_1;
 				ELSE
 					nextState <= cmd_ANNN_dataReady;
 				END IF;
 					
 			-- Waits for txDone --> high
-			WHEN cmd_ANNN_buffer_1 =>
+			WHEN cmd_ANNN_buf_1 =>
 				if (txDone = '1') then
 					nextState <= cmd_ANNN_tx_1; 
 				ELSE
-					nextState <= cmd_ANNN_buffer_1;
+					nextState <= cmd_ANNN_buf_1;
 				END IF;
 					
 			-- Waits for txDone --> high 
 			WHEN cmd_ANNN_tx_1 =>
 				if (txDone = '1') then
 					v_txNow := '1';
-					nextState <= cmd_ANNN_buffer_2;
+					nextState <= cmd_ANNN_buf_2;
 				ELSE
 					nextState <= cmd_ANNN_tx_1;
 				END IF; 
 			
 			-- Waits for txDone --> high
-			WHEN cmd_ANNN_buffer_2 =>
+			WHEN cmd_ANNN_buf_2 =>
 				if (txDone = '1') then
 					nextState <= cmd_ANNN_tx_2; 
 				ELSE
-					nextState <= cmd_ANNN_buffer_2;
+					nextState <= cmd_ANNN_buf_2;
 				END IF;
 					
 			-- Waits for txDone --> high 
@@ -343,32 +343,32 @@ begin
 				END IF;
 			
 			------------- L command ----------------------------		
-			-- Waits for txDone --> High
-			WHEN cmd_L_buffer_1 =>
+			
+			WHEN cmd_L_buf_1 =>
 				if (txDone = '1') then
 					nextState <= cmd_L_tx_1; 
 				ELSE
-					nextState <= cmd_L_buffer_1;
+					nextState <= cmd_L_buf_1;
 				END IF;
 					
-			-- Waits for txDone --> high 
+		
 			WHEN cmd_L_tx_1 =>
 				if (txDone = '1') then
 					v_txNow := '1';
-					nextState <= cmd_L_buffer_2;
+					nextState <= cmd_L_buf_2;
 				ELSE
 					nextState <= cmd_L_tx_1;
 				END IF;
 
-			-- Waits for txDone--> high
-			WHEN cmd_L_buffer_2 =>
+			
+			WHEN cmd_L_buf_2 =>
 				if (txDone = '1') then
 					nextState <= cmd_L_tx_2; 
 				ELSE
-					nextState <= cmd_L_buffer_2;
+					nextState <= cmd_L_buf_2;
 				END IF;
 					
-			-- Waits for txDone --> high 
+			
 			WHEN cmd_L_tx_2 =>
 				if (txDone = '1') then
 					v_txNow := '1';
@@ -379,32 +379,32 @@ begin
 				END IF;
 					
 			------------- P command ----------------------------		
-			-- Waits for txDone -->high
-			WHEN cmd_P_buffer_char_1 =>
+		
+			WHEN cmd_P_buf_char_1 =>
 				if (txDone = '1') then
 					nextState <= cmd_P_tx_char_1; 
 				ELSE
-					nextState <= cmd_P_buffer_char_1;
+					nextState <= cmd_P_buf_char_1;
 				END IF;
 					
-			-- Waits for txDone --> high 
+			
 			WHEN cmd_P_tx_char_1 =>
 				if (txDone = '1') then
 					v_txNow := '1';
-					nextState <= cmd_P_buffer_char_2;
+					nextState <= cmd_P_buf_char_2;
 				ELSE
 					nextState <= cmd_P_tx_char_1;
 				END IF;
 
-			-- Waits for txDone --> high & set output
-			WHEN cmd_P_buffer_char_2 =>
+			
+			WHEN cmd_P_buf_char_2 =>
 				if (txDone = '1') then
 					nextState <= cmd_P_tx_char_2; 
 				ELSE
-					nextState <= cmd_P_buffer_char_2;
+					nextState <= cmd_P_buf_char_2;
 				END IF;
 					
-			-- Waits for txDone --> high 
+		
 			WHEN cmd_P_tx_char_2 =>
 				if (txDone = '1') then
 					v_txNow := '1';
@@ -413,47 +413,46 @@ begin
 					nextState <= cmd_P_tx_char_2;
 				END IF;
 
-			WHEN cmd_P_buffer_bcd_2 =>
+			WHEN cmd_P_buf_bcd_2 =>
 				if (txDone = '1') then
 					nextState <= cmd_P_tx_bcd_2; 
 				ELSE
-					nextState <= cmd_P_buffer_bcd_2;
+					nextState <= cmd_P_buf_bcd_2;
 				END IF;
 					
 			-- Waits for txDone --> high 
 			WHEN cmd_P_tx_bcd_2 =>
 				if (txDone = '1') then
 					v_txNow := '1';
-					nextState <= cmd_P_buffer_bcd_1; --putty_ANNN_wait;
+					nextState <= cmd_P_buf_bcd_1; --putty_ANNN_wait;
 				ELSE
 					nextState <= cmd_P_tx_bcd_2;
 				END IF;
 					
 				--------------
-			WHEN cmd_P_buffer_bcd_1 =>
+			WHEN cmd_P_buf_bcd_1 =>
 				if (txDone = '1') then
 					nextState <= cmd_P_tx_bcd_1; 
 				ELSE
-					nextState <= cmd_P_buffer_bcd_1;
+					nextState <= cmd_P_buf_bcd_1;
 				END IF;
-					
-			-- Waits for txDone --> high 
+				
 			WHEN cmd_P_tx_bcd_1 =>
 				if (txDone = '1') then
 					v_txNow := '1';
-					nextState <= cmd_P_buffer_bcd_0; 
+					nextState <= cmd_P_buf_bcd_0; 
 				ELSE
 					nextState <= cmd_P_tx_bcd_1;
 				END IF;
 				
-			WHEN cmd_P_buffer_bcd_0 =>
+			WHEN cmd_P_buf_bcd_0 =>
 				if (txDone = '1') then
 					nextState <= cmd_P_tx_bcd_0; 
 				ELSE
-					nextState <= cmd_P_buffer_bcd_0;
+					nextState <= cmd_P_buf_bcd_0;
 				END IF;
 					
-			-- Waits for txDone --> high 
+		
 			WHEN cmd_P_tx_bcd_0 =>
 				if (txDone = '1') then
 					v_txNow := '1';
@@ -470,7 +469,7 @@ begin
 					elsif s_CurChoice = "01001100" then       -- 'L' command
 						nextState <= cmd_L_checkSeq;
 					elsif s_CurChoice = "01010000" then       -- 'P' command
-						nextState <= cmd_P_buffer_bcd_2;
+						nextState <= cmd_P_buf_bcd_2;
 					end if;
 				ELSE
 					nextState <= putty_space;
@@ -516,7 +515,7 @@ begin
 					nextState <= putty_r_3_tx;
 				END IF;
 					
-			----------------putty2-----------------***
+			----------------putty2-----------------
 					
 			WHEN putty_eq_2_wait =>
 				IF (txdone = '1') then
@@ -525,8 +524,7 @@ begin
 					nextState <= putty_eq_2_wait;
 				END IF;
 					
-			WHEN putty_eq_2_tx =>
---				s_dataTx <= "00111101";				
+			WHEN putty_eq_2_tx =>			
 				IF (txdone = '1') then
 					v_txNow := '1';
 					IF (count_eq > 4) then
@@ -568,13 +566,13 @@ begin
 				END IF;
 			WHEN putty_wait_final =>
 				IF (txdone = '1') then
-					nextState <= INIT_idle;
+					nextState <= INIT_inact;
 				ELSE
 					nextState <= putty_wait_final;
 				END IF;
 			
 			WHEN OTHERS => 
-				nextState <= INIT_idle;
+				nextState <= INIT_inact;
 		END CASE;
 		
 		start <= v_start;
@@ -822,7 +820,7 @@ begin
 		IF rising_edge(clk) THEN
 			IF (reset = '1') or ((curState = putty_wait_final) and (txdone = '1')) THEN
 	        	s_dataTx <= X"FF"; -- HEX value
-			elsif ((curState = INIT_idle) or (curState = valid_A_idle) or (curState = valid_1_idle) or (curState = valid_2_idle)) and (rxNow = '1') then
+			elsif ((curState = INIT_inact) or (curState = valid_A_inact) or (curState = valid_1_inact) or (curState = valid_2_inact)) and (rxNow = '1') then
 				s_dataTx <= rxData;
 			elsif (curState = putty_n_1_wait) or (curState = putty_n_2_wait) or (curState = putty_n_3_wait) or (curState = putty_n_4_wait) then
 				s_dataTx <= "00001010"; -- Line Break
@@ -830,25 +828,25 @@ begin
 				s_dataTx <= "00001101"; 
 			elsif (curState = putty_eq_1_wait) or (curState = putty_eq_2_wait) then
 				s_dataTx <= "00111101";
-			elsif (curState = cmd_ANNN_buffer_1) then
+			elsif (curState = cmd_ANNN_buf_1) then
 				s_dataTx <= ANNN_dataTx(15 downto 8);
-			elsif (curState = cmd_ANNN_buffer_2) then
+			elsif (curState = cmd_ANNN_buf_2) then
 				s_dataTx <= ANNN_dataTx(7 downto 0);
 			elsif (curState = putty_space) then
 				s_dataTx <= "00100000";
-			elsif (curState = cmd_L_buffer_1) then
+			elsif (curState = cmd_L_buf_1) then
 				s_dataTx <= L_dataTx(15 downto 8);
-			elsif (curState = cmd_L_buffer_2) and (txdone = '1') then
+			elsif (curState = cmd_L_buf_2) and (txdone = '1') then
 				s_dataTx <= L_dataTx(7 downto 0);
-			elsif (curState = cmd_P_buffer_char_1) then
+			elsif (curState = cmd_P_buf_char_1) then
 				s_dataTx <= P_dataTx(15 downto 8);
-			elsif (curState = cmd_P_buffer_char_2) then
+			elsif (curState = cmd_P_buf_char_2) then
 				s_dataTx <= P_dataTx(7 downto 0);
-			elsif (curState = cmd_P_buffer_bcd_2) then
+			elsif (curState = cmd_P_buf_bcd_2) then
 				s_dataTx <= P_dataTx_p_2;
-			elsif (curState = cmd_P_buffer_bcd_1) then
+			elsif (curState = cmd_P_buf_bcd_1) then
 				s_dataTx <= P_dataTx_p_1;
-			elsif (curState = cmd_P_buffer_bcd_0) then
+			elsif (curState = cmd_P_buf_bcd_0) then
 				s_dataTx <= P_dataTx_p_0;
 			END IF;
 		END IF;
@@ -876,9 +874,9 @@ begin
 			END IF;
 			-- Counter for 'L' (7bits)
 			IF 	(curState = cmd_wait) or 
-				(curState = cmd_L_buffer_1) or 
+				(curState = cmd_L_buf_1) or 
 				(curState = cmd_L_tx_1) or 
-				(curState = cmd_L_buffer_2) or 
+				(curState = cmd_L_buf_2) or 
 				(curState = cmd_L_tx_2) or
 				(curState = putty_space) or 
 				(curState = cmd_L_checkSeq) THEN
@@ -905,6 +903,6 @@ begin
 		IF (curState = cmd_L_checkSeq) and (nextState /= curState) then
 			en_count_L <= '1';
 		end if;
-
+			
 	END PROCESS;
 end cmdProc_behav;
