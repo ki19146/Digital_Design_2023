@@ -1,0 +1,3 @@
+This is the folder includes:
+1. the detailed state machine and the formal FSM for submit, which refers to the cmdProc.vhd in the repo
+2. the word file for command processor about report, its a draft version and need to be adjust the format to suit the group project.
